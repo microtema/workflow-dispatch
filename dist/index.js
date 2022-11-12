@@ -498,7 +498,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
 const PackageJSON = __importStar(__webpack_require__(731));
-const api = __importStar(__webpack_require__(172));
+const dispatch = __importStar(__webpack_require__(308));
 //
 // Main task function (async wrapper)
 //
@@ -521,7 +521,6 @@ function run() {
                 inputs = JSON.parse(inputsJson);
             }
             const { commitId } = inputs;
-            core.info(`### github:  ${JSON.stringify(github)}`);
             // Get octokit client for making API calls
             const octokit = github.getOctokit(token);
             // List workflows via API, and handle paginated results
@@ -555,7 +554,7 @@ function run() {
                 commitId: commitId,
                 workflowTimeoutSeconds: core.getInput("workflow_timeout_seconds"),
             };
-            yield api.applyWorkflowRunId(foundWorkflow.id, config, octokit);
+            yield dispatch.applyWorkflowRunId(foundWorkflow.id, config, octokit);
         }
         catch (error) {
             const e = error;
@@ -1023,246 +1022,6 @@ function getBranchName(ref) {
     return branchName;
 }
 exports.getBranchName = getBranchName;
-
-
-/***/ }),
-
-/***/ 172:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.applyWorkflowRunId = exports.retryOrDie = exports.getWorkflowRunJobSteps = exports.getWorkflowRunIds = exports.getWorkflowRunUrl = void 0;
-const core = __importStar(__webpack_require__(470));
-const action_1 = __webpack_require__(366);
-const utils_1 = __webpack_require__(163);
-const WORKFLOW_FETCH_TIMEOUT_MS = 60 * 1000;
-const WORKFLOW_JOB_STEPS_RETRY_MS = 5000;
-const WORKFLOW_TIMEOUT_SECONDS = 5 * 60;
-function getWorkflowRunUrl(runId, config, octokit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // https://docs.github.com/en/rest/reference/actions#get-a-workflow-run
-            const response = yield octokit.rest.actions.getWorkflowRun({
-                owner: config.owner,
-                repo: config.repo,
-                run_id: runId
-            });
-            if (response.status !== 200) {
-                throw new Error(`Failed to get Workflow Run state, expected 200 but received ${response.status}`);
-            }
-            core.debug(`Fetched Run:\n` +
-                `  Repository: ${config.owner}/${config.repo}\n` +
-                `  Run ID: ${runId}\n` +
-                `  URL: ${response.data.html_url}`);
-            return response.data.html_url;
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                core.error(`getWorkflowRunUrl: An unexpected error has occurred: ${error.message}`);
-                error.stack && core.debug(error.stack);
-            }
-            throw error;
-        }
-    });
-}
-exports.getWorkflowRunUrl = getWorkflowRunUrl;
-function getWorkflowRunIds(workflowId, config, octokit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const branchName = (0, utils_1.getBranchName)(config.ref);
-            const params = Object.assign({ owner: config.owner, repo: config.repo, workflow_id: workflowId }, (branchName
-                ? {
-                    branch: branchName,
-                    per_page: 5,
-                }
-                : {
-                    per_page: 10,
-                }));
-            core.debug("List Workflow Runs:\n" +
-                `  params: ${JSON.stringify(params)}`);
-            // https://docs.github.com/en/rest/reference/actions#list-workflow-runs
-            const response = yield octokit.rest.actions.listWorkflowRuns(params);
-            if (response.status !== 200) {
-                throw new Error(`Failed to get Workflow runs, expected 200 but received ${response.status}`);
-            }
-            const runIds = response.data.workflow_runs.map((workflowRun) => workflowRun.id);
-            core.info("Fetched Workflow Runs:\n" +
-                `  Repository: ${config.owner}/${config.repo}\n` +
-                `  Branch: ${branchName || "undefined"}\n` +
-                `  Workflow ID: ${workflowId}\n` +
-                `  Runs Fetched: [${runIds}]`);
-            return runIds;
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                core.error(`getWorkflowRunIds: An unexpected error has occurred: ${error.message}`);
-                error.stack && core.debug(error.stack);
-            }
-            throw error;
-        }
-    });
-}
-exports.getWorkflowRunIds = getWorkflowRunIds;
-function getWorkflowRunJobSteps(runId, config, octokit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run
-            const response = yield octokit.rest.actions.listJobsForWorkflowRun({
-                owner: config.owner,
-                repo: config.repo,
-                run_id: runId,
-                filter: "latest",
-            });
-            if (response.status !== 200) {
-                throw new Error(`Failed to get Workflow Run Jobs, expected 200 but received ${response.status}`);
-            }
-            const jobs = response.data.jobs.map((job) => {
-                var _a;
-                return ({
-                    id: job.id,
-                    steps: ((_a = job.steps) === null || _a === void 0 ? void 0 : _a.map((step) => step.name)) || [],
-                });
-            });
-            // const steps = Array.from(new Set(jobs.flatMap((job) => job.steps)));
-            let allSteps = [];
-            response.data.jobs.forEach((job) => {
-                var _a;
-                const steps = ((_a = job.steps) === null || _a === void 0 ? void 0 : _a.map((step) => step.name)) || [];
-                steps.forEach((step) => allSteps.push(step));
-            });
-            const steps = Array.from(new Set(allSteps));
-            core.info("Fetched Workflow Run Job Steps:\n" +
-                `  Repository: ${config.owner}/${config.repo}\n` +
-                `  Workflow Run ID: ${config.runId}\n` +
-                `  Jobs Fetched: [${jobs.map((job) => job.id)}]` +
-                `  Steps Fetched: [${steps}]`);
-            return steps;
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                core.error(`getWorkflowRunJobs: An unexpected error has occurred: ${error.message}`);
-                error.stack && core.debug(error.stack);
-            }
-            throw error;
-        }
-    });
-}
-exports.getWorkflowRunJobSteps = getWorkflowRunJobSteps;
-/**
- * Attempt to get a non-empty array from the API.
- */
-function retryOrDie(retryFunc, timeoutMs) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const startTime = Date.now();
-        let elapsedTime = 0;
-        while (elapsedTime < timeoutMs) {
-            elapsedTime = Date.now() - startTime;
-            const response = yield retryFunc();
-            if (response.length > 0) {
-                return response;
-            }
-            yield new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-        throw new Error("Timed out while attempting to fetch data");
-    });
-}
-exports.retryOrDie = retryOrDie;
-function applyWorkflowRunId(workflowId, config, octokit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const startTime = Date.now();
-            const timeoutMs = ((0, action_1.getNumberFromValue)(config.workflowTimeoutSeconds) || WORKFLOW_TIMEOUT_SECONDS) * 1000;
-            let attemptNo = 0;
-            let elapsedTime = Date.now() - startTime;
-            core.info("Attempt to extract run ID from steps...");
-            while (elapsedTime < timeoutMs) {
-                attemptNo++;
-                elapsedTime = Date.now() - startTime;
-                core.info(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
-                // Get all runs for a given workflow ID
-                const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS;
-                const workflowRunIds = yield retryOrDie(() => getWorkflowRunIds(workflowId, config, octokit), timeout);
-                core.info(`Attempting to get step names for Run IDs: [${workflowRunIds}] filtered by [${config.commitId}]`);
-                const idRegex = new RegExp(config.commitId);
-                /**
-                 * Attempt to read the distinct ID in the steps
-                 * for each existing run ID.
-                 */
-                for (const id of workflowRunIds) {
-                    try {
-                        const steps = yield getWorkflowRunJobSteps(id, config, octokit);
-                        for (const step of steps) {
-                            core.info("Match step with idRegex:\n" +
-                                `  Step: ${step}\n` +
-                                `  idRegex: ${idRegex}` +
-                                `  idRegex.test: ${idRegex.test(step)}`);
-                            if (idRegex.test(step)) {
-                                const url = yield getWorkflowRunUrl(id, config, octokit);
-                                core.info("Successfully identified remote Run:\n" +
-                                    `  Run ID: ${id}\n` +
-                                    `  URL: ${url}`);
-                                core.setOutput(action_1.ActionOutputs.runId, id);
-                                return;
-                            }
-                        }
-                    }
-                    catch (error) {
-                        if (error instanceof Error && error.message !== "Not Found") {
-                            throw error;
-                        }
-                        core.info(`Could not identify ID in run: ${id}, continuing...`);
-                    }
-                }
-                core.info(`Exhausted searching IDs in known runs, attempt ${attemptNo}...`);
-                yield new Promise((resolve) => setTimeout(resolve, WORKFLOW_JOB_STEPS_RETRY_MS));
-            }
-            throw new Error("Timeout exceeded while attempting to get Run ID");
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                core.error(`Failed to complete: ${error.message}`);
-                core.warning("Does the token have the correct permissions?");
-                error.stack && core.debug(error.stack);
-                core.setFailed(error.message);
-            }
-        }
-    });
-}
-exports.applyWorkflowRunId = applyWorkflowRunId;
 
 
 /***/ }),
@@ -1980,6 +1739,218 @@ exports.paginatingEndpoints = paginatingEndpoints;
 
 /***/ }),
 
+/***/ 308:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.applyWorkflowRunId = void 0;
+const core = __importStar(__webpack_require__(470));
+const utils_1 = __webpack_require__(163);
+const WORKFLOW_FETCH_TIMEOUT_MS = 60 * 1000;
+const WORKFLOW_JOB_STEPS_RETRY_MS = 5000;
+const WORKFLOW_TIMEOUT_SECONDS = 5 * 60;
+function getNumberFromValue(value) {
+    if (value === "") {
+        return undefined;
+    }
+    try {
+        const num = parseInt(value);
+        if (isNaN(num)) {
+            throw new Error("Parsed value is NaN");
+        }
+        return num;
+    }
+    catch (_a) {
+        throw new Error(`Unable to parse value: ${value}`);
+    }
+}
+function getWorkflowRunIds(workflowId, config, octokit) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const branchName = (0, utils_1.getBranchName)(config.ref);
+            const params = Object.assign({ owner: config.owner, repo: config.repo, workflow_id: workflowId }, (branchName ? { branch: branchName, per_page: 5 } : { per_page: 10 }));
+            // https://docs.github.com/en/rest/reference/actions#list-workflow-runs
+            const response = yield octokit.rest.actions.listWorkflowRuns(params);
+            if (response.status !== 200) {
+                throw new Error(`Failed to get Workflow runs, expected 200 but received ${response.status}`);
+            }
+            const runIds = response.data.workflow_runs.map((workflowRun) => workflowRun.id);
+            core.info("Fetched Workflow Runs:\n" +
+                `  Repository: ${config.owner}/${config.repo}\n` +
+                `  Branch: ${branchName || "undefined"}\n` +
+                `  Workflow ID: ${workflowId}\n` +
+                `  Runs Fetched: [${runIds}]`);
+            return runIds;
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                core.error(`getWorkflowRunIds: An unexpected error has occurred: ${error.message}`);
+                error.stack && core.debug(error.stack);
+            }
+            throw error;
+        }
+    });
+}
+function getWorkflowRunJobSteps(runId, config, octokit) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run
+            const response = yield octokit.rest.actions.listJobsForWorkflowRun({
+                owner: config.owner,
+                repo: config.repo,
+                run_id: runId,
+                filter: "latest",
+            });
+            if (response.status !== 200) {
+                throw new Error(`Failed to get Workflow Run Jobs, expected 200 but received ${response.status}`);
+            }
+            const jobs = response.data.jobs.map((job) => {
+                var _a;
+                return ({
+                    id: job.id,
+                    steps: ((_a = job.steps) === null || _a === void 0 ? void 0 : _a.map((step) => step.name)) || [],
+                });
+            });
+            const allSteps = [];
+            response.data.jobs.forEach((job) => {
+                var _a;
+                const steps = ((_a = job.steps) === null || _a === void 0 ? void 0 : _a.map((step) => step.name)) || [];
+                steps.forEach((step) => allSteps.push(step));
+            });
+            const steps = Array.from(new Set(allSteps));
+            core.info("Fetched Workflow Run Job Steps:\n" +
+                `  Repository: ${config.owner}/${config.repo}\n` +
+                `  Workflow Run ID: ${config.runId}\n` +
+                `  Jobs Fetched: [${jobs.map((job) => job.id)}]` +
+                `  Steps Fetched: [${steps}]`);
+            return steps;
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                core.error(`getWorkflowRunJobs: An unexpected error has occurred: ${error.message}`);
+                error.stack && core.debug(error.stack);
+            }
+            throw error;
+        }
+    });
+}
+/**
+ * Attempt to get a non-empty array from the API.
+ */
+function retryOrDie(retryFunc, timeoutMs) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const startTime = Date.now();
+        let elapsedTime = 0;
+        while (elapsedTime < timeoutMs) {
+            elapsedTime = Date.now() - startTime;
+            const response = yield retryFunc();
+            if (response.length > 0) {
+                return response;
+            }
+            yield new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        throw new Error("Timed out while attempting to fetch data");
+    });
+}
+function applyWorkflowRunId(workflowId, config, octokit) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const startTime = Date.now();
+            const timeoutMs = (getNumberFromValue(config.workflowTimeoutSeconds) || WORKFLOW_TIMEOUT_SECONDS) * 1000;
+            let attemptNo = 0;
+            let elapsedTime = Date.now() - startTime;
+            core.info("Attempt to extract run ID from steps filtered by [${config.commitId}] ...");
+            while (elapsedTime < timeoutMs) {
+                attemptNo++;
+                elapsedTime = Date.now() - startTime;
+                core.info(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
+                // Get all runs for a given workflow ID
+                const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS;
+                const workflowRunIds = yield retryOrDie(() => getWorkflowRunIds(workflowId, config, octokit), timeout);
+                core.debug(`Attempting to get step names for Run IDs: [${workflowRunIds}] filtered by [${config.commitId}]`);
+                const idRegex = new RegExp(config.commitId);
+                /**
+                 * Attempt to read the distinct ID in the steps
+                 * for each existing run ID.
+                 */
+                for (const runId of workflowRunIds) {
+                    try {
+                        const steps = yield getWorkflowRunJobSteps(runId, config, octokit);
+                        for (const step of steps) {
+                            core.debug("Match step with idRegex:\n" +
+                                `  Step: ${step}\n` +
+                                `  idRegex: ${idRegex}` +
+                                `  idRegex.test: ${idRegex.test(step)}`);
+                            if (idRegex.test(step)) {
+                                core.info("Successfully identified remote Run:\n" +
+                                    `  Run ID: ${runId}\n`);
+                                core.info(`runId: ${runId}`);
+                                core.setOutput('runId', runId);
+                                return;
+                            }
+                        }
+                    }
+                    catch (error) {
+                        if (error instanceof Error && error.message !== "Not Found") {
+                            throw error;
+                        }
+                        core.info(`Could not identify ID in run: ${runId}, continuing...`);
+                    }
+                }
+                core.info(`Exhausted searching IDs in known runs, attempt ${attemptNo}...`);
+                yield new Promise((resolve) => setTimeout(resolve, WORKFLOW_JOB_STEPS_RETRY_MS));
+            }
+            throw new Error("Timeout exceeded while attempting to get Run ID");
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                core.error(`Failed to complete: ${error.message}`);
+                core.warning("Does the token have the correct permissions?");
+                error.stack && core.debug(error.stack);
+                core.setFailed(error.message);
+            }
+        }
+    });
+}
+exports.applyWorkflowRunId = applyWorkflowRunId;
+
+
+/***/ }),
+
 /***/ 329:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -2060,38 +2031,6 @@ exports.isPlainObject = isPlainObject;
 /***/ (function(module) {
 
 module.exports = require("assert");
-
-/***/ }),
-
-/***/ 366:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getNumberFromValue = exports.ActionOutputs = void 0;
-const WORKFLOW_TIMEOUT_SECONDS = 5 * 60;
-var ActionOutputs;
-(function (ActionOutputs) {
-    ActionOutputs["runId"] = "run_id";
-})(ActionOutputs = exports.ActionOutputs || (exports.ActionOutputs = {}));
-function getNumberFromValue(value) {
-    if (value === "") {
-        return undefined;
-    }
-    try {
-        const num = parseInt(value);
-        if (isNaN(num)) {
-            throw new Error("Parsed value is NaN");
-        }
-        return num;
-    }
-    catch (_a) {
-        throw new Error(`Unable to parse value: ${value}`);
-    }
-}
-exports.getNumberFromValue = getNumberFromValue;
-
 
 /***/ }),
 

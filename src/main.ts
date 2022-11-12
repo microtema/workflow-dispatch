@@ -8,7 +8,7 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as PackageJSON from '../package.json'
-import * as api from './api';
+import * as dispatch from './dispatch';
 
 type Workflow = {
     id: number
@@ -40,8 +40,6 @@ async function run(): Promise<void> {
         }
 
         const {commitId} = inputs
-
-        core.info(`### github:  ${JSON.stringify(github)}`)
 
         // Get octokit client for making API calls
         const octokit = github.getOctokit(token)
@@ -86,7 +84,7 @@ async function run(): Promise<void> {
             workflowTimeoutSeconds: core.getInput("workflow_timeout_seconds"),
         }
 
-        await api.applyWorkflowRunId(foundWorkflow.id, config, octokit)
+        await dispatch.applyWorkflowRunId(foundWorkflow.id, config, octokit)
 
     } catch (error) {
         const e = error as Error
