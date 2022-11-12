@@ -49,9 +49,7 @@ export async function getWorkflowRunUrl(runId: number, config: any, octokit: Oct
 export async function getWorkflowRunIds(workflowId: number, config: any, octokit: Octokit): Promise<number[]> {
     try {
         const branchName = getBranchName(config.ref);
-
-        // https://docs.github.com/en/rest/reference/actions#list-workflow-runs
-        const response = await octokit.rest.actions.listWorkflowRuns({
+        const params = {
             owner: config.owner,
             repo: config.repo,
             workflow_id: workflowId,
@@ -63,7 +61,15 @@ export async function getWorkflowRunIds(workflowId: number, config: any, octokit
                 : {
                     per_page: 10,
                 }),
-        });
+        }
+
+        core.info(
+            "List Workflow Runs:\n" +
+            `  params: ${JSON.stringify(params)}`
+        );
+
+        // https://docs.github.com/en/rest/reference/actions#list-workflow-runs
+        const response = await octokit.rest.actions.listWorkflowRuns(params);
 
         if (response.status !== 200) {
             throw new Error(
@@ -75,7 +81,7 @@ export async function getWorkflowRunIds(workflowId: number, config: any, octokit
             (workflowRun) => workflowRun.id
         );
 
-        core.debug(
+        core.info(
             "Fetched Workflow Runs:\n" +
             `  Repository: ${config.owner}/${config.repo}\n` +
             `  Branch: ${branchName || "undefined"}\n` +
@@ -126,7 +132,7 @@ export async function getWorkflowRunJobSteps(runId: number, config: any, octokit
 
         const steps = Array.from(new Set(allSteps))
 
-        core.debug(
+        core.info(
             "Fetched Workflow Run Job Steps:\n" +
             `  Repository: ${config.owner}/${config.repo}\n` +
             `  Workflow Run ID: ${config.runId}\n` +
@@ -183,7 +189,7 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
             attemptNo++;
             elapsedTime = Date.now() - startTime;
 
-            core.debug(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
+            core.info(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
 
             // Get all runs for a given workflow ID
             const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS
@@ -217,7 +223,7 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
                     if (error instanceof Error && error.message !== "Not Found") {
                         throw error;
                     }
-                    core.debug(`Could not identify ID in run: ${id}, continuing...`);
+                    core.info(`Could not identify ID in run: ${id}, continuing...`);
                 }
             }
 

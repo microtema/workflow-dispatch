@@ -1265,20 +1265,23 @@ function getWorkflowRunIds(workflowId, config, octokit) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const branchName = (0, utils_1.getBranchName)(config.ref);
-            // https://docs.github.com/en/rest/reference/actions#list-workflow-runs
-            const response = yield octokit.rest.actions.listWorkflowRuns(Object.assign({ owner: config.owner, repo: config.repo, workflow_id: workflowId }, (branchName
+            const params = Object.assign({ owner: config.owner, repo: config.repo, workflow_id: workflowId }, (branchName
                 ? {
                     branch: branchName,
                     per_page: 5,
                 }
                 : {
                     per_page: 10,
-                })));
+                }));
+            core.info("List Workflow Runs:\n" +
+                `  params: ${JSON.stringify(params)}`);
+            // https://docs.github.com/en/rest/reference/actions#list-workflow-runs
+            const response = yield octokit.rest.actions.listWorkflowRuns(params);
             if (response.status !== 200) {
                 throw new Error(`Failed to get Workflow runs, expected 200 but received ${response.status}`);
             }
             const runIds = response.data.workflow_runs.map((workflowRun) => workflowRun.id);
-            core.debug("Fetched Workflow Runs:\n" +
+            core.info("Fetched Workflow Runs:\n" +
                 `  Repository: ${config.owner}/${config.repo}\n` +
                 `  Branch: ${branchName || "undefined"}\n` +
                 `  Workflow ID: ${workflowId}\n` +
@@ -1323,7 +1326,7 @@ function getWorkflowRunJobSteps(runId, config, octokit) {
                 steps.forEach((step) => allSteps.push(step));
             });
             const steps = Array.from(new Set(allSteps));
-            core.debug("Fetched Workflow Run Job Steps:\n" +
+            core.info("Fetched Workflow Run Job Steps:\n" +
                 `  Repository: ${config.owner}/${config.repo}\n` +
                 `  Workflow Run ID: ${config.runId}\n` +
                 `  Jobs Fetched: [${jobs.map((job) => job.id)}]` +
@@ -1370,7 +1373,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
             while (elapsedTime < timeoutMs) {
                 attemptNo++;
                 elapsedTime = Date.now() - startTime;
-                core.debug(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
+                core.info(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
                 // Get all runs for a given workflow ID
                 const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS;
                 const workflowRunIds = yield retryOrDie(() => getWorkflowRunIds(workflowId, config, octokit), timeout);
@@ -1398,7 +1401,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
                         if (error instanceof Error && error.message !== "Not Found") {
                             throw error;
                         }
-                        core.debug(`Could not identify ID in run: ${id}, continuing...`);
+                        core.info(`Could not identify ID in run: ${id}, continuing...`);
                     }
                 }
                 core.info(`Exhausted searching IDs in known runs, attempt ${attemptNo}...`);
