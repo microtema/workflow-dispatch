@@ -73,7 +73,7 @@ async function run(): Promise<void> {
         core.info(`🏆 API response status: ${dispatchResp.status}`)
         core.setOutput('workflowId', foundWorkflow.id)
 
-        await api.applyWorkflowRunId(foundWorkflow.id)
+       // await api.applyWorkflowRunId(foundWorkflow.id)
 
     } catch (error) {
         const e = error as Error
