@@ -69,6 +69,7 @@ async function run(): Promise<void> {
       inputs: inputs
     })
 
+    core.info(`🏆 API response status: ${JSON.stringify(foundWorkflow)}`)
     core.info(`🏆 API response status: ${dispatchResp.status}`)
     core.setOutput('workflowId', foundWorkflow.id)
     core.setOutput('runId', JSON.stringify(foundWorkflow))
