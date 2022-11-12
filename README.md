@@ -69,3 +69,12 @@ This Action emits two output named `workflowId`, `runId` .
     repo: microtema/example
     inputs: '{ "message": "blah blah", "something": false }'
 ```
+
+## Commit, tag, and push your action to GitHub
+
+It's best practice to also add a version tag for releases of your action. For more information on versioning your action, see "About actions."
+
+```
+git tag -a -m "My first action release" v1.1
+git push --follow-tags
+```
