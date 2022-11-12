@@ -1,65 +1,24 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github';
 import {v4 as uuid} from 'uuid';
 import type {GitHub} from '@actions/github/lib/utils';
-import {ActionConfig, ActionOutputs, getConfig} from './action';
+import {ActionOutputs, getNumberFromValue} from './action';
 import {getBranchName} from './utils';
 
 const DISTINCT_ID = uuid();
 const WORKFLOW_FETCH_TIMEOUT_MS = 60 * 1000;
 const WORKFLOW_JOB_STEPS_RETRY_MS = 5000;
 
+const WORKFLOW_TIMEOUT_SECONDS = 5 * 60;
+
 type Octokit = InstanceType<typeof GitHub>;
 
-let config: ActionConfig;
-let octokit: Octokit;
-
-export function init(cfg?: ActionConfig): void {
-    config = cfg || getConfig();
-    octokit = github.getOctokit(config.token);
-}
-
-export async function getWorkflowId(workflowFilename: string): Promise<number> {
-    try {
-        // https://docs.github.com/en/rest/reference/actions#list-repository-workflows
-        const response = await octokit.rest.actions.listRepoWorkflows({
-            owner: config.owner,
-            repo: config.repo,
-        });
-
-        if (response.status !== 200) {
-            throw new Error(
-                `Failed to get workflows, expected 200 but received ${response.status}`
-            );
-        }
-
-        const workflowId = response.data.workflows.find((workflow) =>
-            new RegExp(workflowFilename).test(workflow.path)
-        )?.id;
-
-        if (workflowId === undefined) {
-            throw new Error(`Unable to find ID for Workflow: ${workflowFilename}`);
-        }
-
-        return workflowId;
-    } catch (error) {
-        if (error instanceof Error) {
-            core.error(
-                `getWorkflowId: An unexpected error has occurred: ${error.message}`
-            );
-            error.stack && core.debug(error.stack);
-        }
-        throw error;
-    }
-}
-
-export async function getWorkflowRunUrl(runId: number): Promise<string> {
+export async function getWorkflowRunUrl(runId: number, config: any, octokit: Octokit): Promise<string> {
     try {
         // https://docs.github.com/en/rest/reference/actions#get-a-workflow-run
         const response = await octokit.rest.actions.getWorkflowRun({
             owner: config.owner,
             repo: config.repo,
-            run_id: runId,
+            run_id: runId
         });
 
         if (response.status !== 200) {
@@ -87,7 +46,7 @@ export async function getWorkflowRunUrl(runId: number): Promise<string> {
     }
 }
 
-export async function getWorkflowRunIds(workflowId: number): Promise<number[]> {
+export async function getWorkflowRunIds(workflowId: number, config: any, octokit: Octokit): Promise<number[]> {
     try {
         const branchName = getBranchName(config.ref);
 
@@ -136,7 +95,7 @@ export async function getWorkflowRunIds(workflowId: number): Promise<number[]> {
     }
 }
 
-export async function getWorkflowRunJobSteps(runId: number): Promise<string[]> {
+export async function getWorkflowRunJobSteps(runId: number, config: any, octokit: Octokit): Promise<string[]> {
     try {
         // https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run
         const response = await octokit.rest.actions.listJobsForWorkflowRun({
@@ -170,7 +129,7 @@ export async function getWorkflowRunJobSteps(runId: number): Promise<string[]> {
         core.debug(
             "Fetched Workflow Run Job Steps:\n" +
             `  Repository: ${config.owner}/${config.repo}\n` +
-            `  Workflow Run ID: ${runId}\n` +
+            `  Workflow Run ID: ${config.runId}\n` +
             `  Jobs Fetched: [${jobs.map((job) => job.id)}]` +
             `  Steps Fetched: [${steps}]`
         );
@@ -209,14 +168,12 @@ export async function retryOrDie<T>(
 }
 
 
-export async function applyWorkflowRunId(workflowId: number): Promise<void> {
+export async function applyWorkflowRunId(workflowId: number, config: any, octokit: Octokit): Promise<void> {
 
     try {
-        const config = getConfig();
         const startTime = Date.now();
-        init(config);
 
-        const timeoutMs = config.workflowTimeoutSeconds * 1000;
+        const timeoutMs = (getNumberFromValue(config.workflowTimeoutSeconds) || WORKFLOW_TIMEOUT_SECONDS) * 1000;
         let attemptNo = 0;
         let elapsedTime = Date.now() - startTime;
 
@@ -226,11 +183,11 @@ export async function applyWorkflowRunId(workflowId: number): Promise<void> {
             attemptNo++;
             elapsedTime = Date.now() - startTime;
 
-            core.debug(`Attempting to fetch Run IDs for Workflow ID ${workflowId}`);
+            core.debug(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
 
             // Get all runs for a given workflow ID
             const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS
-            const workflowRunIds = await retryOrDie(() => getWorkflowRunIds(workflowId), timeout);
+            const workflowRunIds = await retryOrDie(() => getWorkflowRunIds(workflowId, config, octokit), timeout);
 
             core.debug(`Attempting to get step names for Run IDs: [${workflowRunIds}]`);
 
@@ -242,11 +199,11 @@ export async function applyWorkflowRunId(workflowId: number): Promise<void> {
              */
             for (const id of workflowRunIds) {
                 try {
-                    const steps = await getWorkflowRunJobSteps(id);
+                    const steps = await getWorkflowRunJobSteps(id, config, octokit);
 
                     for (const step of steps) {
                         if (idRegex.test(step)) {
-                            const url = await getWorkflowRunUrl(id);
+                            const url = await getWorkflowRunUrl(id, config, octokit);
                             core.info(
                                 "Successfully identified remote Run:\n" +
                                 `  Run ID: ${id}\n` +

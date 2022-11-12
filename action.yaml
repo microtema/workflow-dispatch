@@ -18,6 +18,10 @@ inputs:
   repo:
     description: 'Repo owner & name, slash separated, only set if invoking a workflow in a different repo'
     required: false
+  workflow_timeout_seconds:
+    description: Time until giving up waiting for the start of the workflow run.
+    default: '300'
+    required: false
 
 runs:
   using: 'node16'

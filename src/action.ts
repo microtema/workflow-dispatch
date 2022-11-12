@@ -50,21 +50,7 @@ export enum ActionOutputs {
     runId = "run_id",
 }
 
-export function getConfig(): ActionConfig {
-    return {
-        token: core.getInput("token", {required: true}),
-        ref: core.getInput("ref", {required: true}),
-        repo: core.getInput("repo", {required: true}),
-        owner: core.getInput("owner", {required: true}),
-        workflow: getWorkflowValue(core.getInput("workflow", {required: true})),
-        workflowInputs: getWorkflowInputs(core.getInput("workflow_inputs")),
-        workflowTimeoutSeconds:
-            getNumberFromValue(core.getInput("workflow_timeout_seconds")) ||
-            WORKFLOW_TIMEOUT_SECONDS,
-    };
-}
-
-function getNumberFromValue(value: string): number | undefined {
+export function getNumberFromValue(value: string): number | undefined {
     if (value === "") {
         return undefined;
     }
@@ -79,42 +65,5 @@ function getNumberFromValue(value: string): number | undefined {
         return num;
     } catch {
         throw new Error(`Unable to parse value: ${value}`);
-    }
-}
-
-function getWorkflowInputs(
-    workflowInputs: string
-): ActionWorkflowInputs | undefined {
-    if (workflowInputs === "") {
-        return undefined;
-    }
-
-    try {
-        const parsedJson = JSON.parse(workflowInputs);
-        for (const key of Object.keys(parsedJson)) {
-            const type = typeof parsedJson[key];
-            if (type !== "string") {
-                throw new Error(
-                    `Expected values to be strings, ${key} value is ${type}`
-                );
-            }
-        }
-        return parsedJson;
-    } catch (error) {
-        core.error("Failed to parse workflow_inputs JSON");
-        if (error instanceof Error) {
-            error.stack && core.debug(error.stack);
-        }
-        throw error;
-    }
-}
-
-function getWorkflowValue(workflowInput: string): string | number {
-    try {
-        // We can assume that the string is defined and not empty at this point.
-        return getNumberFromValue(workflowInput)!;
-    } catch {
-        // Assume using a workflow name instead of an ID.
-        return workflowInput;
     }
 }
