@@ -605,6 +605,7 @@ function run() {
             });
             core.info(`🏆 API response status: ${dispatchResp.status}`);
             core.setOutput('workflowId', foundWorkflow.id);
+            core.setOutput('runId', JSON.stringify(foundWorkflow));
         }
         catch (error) {
             const e = error;
