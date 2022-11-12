@@ -1,10 +1,8 @@
 import * as core from '@actions/core';
-import {v4 as uuid} from 'uuid';
 import type {GitHub} from '@actions/github/lib/utils';
 import {ActionOutputs, getNumberFromValue} from './action';
 import {getBranchName} from './utils';
 
-const DISTINCT_ID = uuid();
 const WORKFLOW_FETCH_TIMEOUT_MS = 60 * 1000;
 const WORKFLOW_JOB_STEPS_RETRY_MS = 5000;
 
@@ -63,7 +61,7 @@ export async function getWorkflowRunIds(workflowId: number, config: any, octokit
                 }),
         }
 
-        core.info(
+        core.debug(
             "List Workflow Runs:\n" +
             `  params: ${JSON.stringify(params)}`
         );
@@ -195,9 +193,9 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
             const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS
             const workflowRunIds = await retryOrDie(() => getWorkflowRunIds(workflowId, config, octokit), timeout);
 
-            core.debug(`Attempting to get step names for Run IDs: [${workflowRunIds}]`);
+            core.info(`Attempting to get step names for Run IDs: [${workflowRunIds}] filtered by [${config.commitId}]`);
 
-            const idRegex = new RegExp(DISTINCT_ID);
+            const idRegex = new RegExp(config.commitId);
 
             /**
              * Attempt to read the distinct ID in the steps
@@ -205,9 +203,18 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
              */
             for (const id of workflowRunIds) {
                 try {
+
                     const steps = await getWorkflowRunJobSteps(id, config, octokit);
 
                     for (const step of steps) {
+
+                        core.info(
+                            "Match step with idRegex:\n" +
+                            `  Step: ${step}\n` +
+                            `  idRegex: ${idRegex}` +
+                            `  idRegex.test: ${idRegex.test(step)}`
+                        );
+
                         if (idRegex.test(step)) {
                             const url = await getWorkflowRunUrl(id, config, octokit);
                             core.info(

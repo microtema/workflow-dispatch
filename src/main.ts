@@ -33,11 +33,15 @@ async function run(): Promise<void> {
             : [github.context.repo.owner, github.context.repo.repo]
 
         // Decode inputs, this MUST be a valid JSON string
-        let inputs = {}
+        let inputs = {"commitId": github['sha']}
         const inputsJson = core.getInput('inputs')
         if (inputsJson) {
             inputs = JSON.parse(inputsJson)
         }
+
+        const {commitId} = inputs
+
+        core.info(`### github:  ${JSON.stringify(github)}`)
 
         // Get octokit client for making API calls
         const octokit = github.getOctokit(token)
@@ -78,6 +82,7 @@ async function run(): Promise<void> {
             ref: ref,
             repo: repo,
             owner: owner,
+            commitId: commitId,
             workflowTimeoutSeconds: core.getInput("workflow_timeout_seconds"),
         }
 
