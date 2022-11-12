@@ -43,20 +43,19 @@ workflow: 1218419
 
 
 ## Action Outputs
-This Action emits a single output named `workflowId`.
-
+This Action emits two output named `workflowId`, `runId` .
 
 ## Example usage
 ```yaml
 - name: Invoke workflow without inputs
-  uses: benc-uk/workflow-dispatch@v1
+  uses: microtema/workflow-dispatch@v1
   with:
     workflow: My Workflow
 ```
 
 ```yaml
 - name: Invoke workflow with inputs
-  uses: benc-uk/workflow-dispatch@v1
+  uses: microtema/workflow-dispatch@v1
   with:
     workflow: Another Workflow
     inputs: '{ "message": "blah blah", "something": true }'
@@ -64,9 +63,9 @@ This Action emits a single output named `workflowId`.
 
 ```yaml
 - name: Invoke workflow in another repo with inputs
-  uses: benc-uk/workflow-dispatch@v1
+  uses: microtema/workflow-dispatch@v1
   with:
     workflow: my-workflow.yaml
-    repo: benc-uk/example
+    repo: microtema/example
     inputs: '{ "message": "blah blah", "something": false }'
 ```

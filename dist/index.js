@@ -1893,7 +1893,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
             const timeoutMs = (getNumberFromValue(config.workflowTimeoutSeconds) || WORKFLOW_TIMEOUT_SECONDS) * 1000;
             let attemptNo = 0;
             let elapsedTime = Date.now() - startTime;
-            core.info(`Attempt to extract run ID for Workflow ID [${workflowId}] steps filtered by UUID [${config.commitId}] ...`);
+            core.info(`🚀 Calling GitHub API to extract runId for Workflow [${workflowId}] steps filtered by UUID [${config.commitId}] ...`);
             while (elapsedTime < timeoutMs) {
                 attemptNo++;
                 elapsedTime = Date.now() - startTime;
@@ -1918,7 +1918,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
                             if (idRegex.test(step)) {
                                 core.debug("Successfully identified remote Run:\n" +
                                     `  Run ID: ${runId}\n`);
-                                core.info(`🏆 Workflow RunId: ${runId}`);
+                                core.info(`🏆 API response RunId: ${runId}`);
                                 core.setOutput('runId', runId);
                                 return;
                             }
@@ -1931,7 +1931,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
                         core.info(`Could not identify ID in run: ${runId}, continuing...`);
                     }
                 }
-                core.info(`Exhausted searching IDs in known runs, attempt ${attemptNo}...`);
+                core.info(`🏃 Exhausted searching IDs in known runs, attempt ${attemptNo}...`);
                 yield new Promise((resolve) => setTimeout(resolve, WORKFLOW_JOB_STEPS_RETRY_MS));
             }
             throw new Error("Timeout exceeded while attempting to get Run ID");
