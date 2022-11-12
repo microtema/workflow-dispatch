@@ -183,7 +183,7 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
                                 "Successfully identified remote Run:\n" +
                                 `  Run ID: ${runId}\n`
                             )
-                            core.info(`🏆 API response RunId: ${runId}`)
+                            core.info(`🏆 API response runId: ${runId}`)
                             core.setOutput('runId', runId)
                             return
                         }

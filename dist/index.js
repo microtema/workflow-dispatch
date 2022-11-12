@@ -1918,7 +1918,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
                             if (idRegex.test(step)) {
                                 core.debug("Successfully identified remote Run:\n" +
                                     `  Run ID: ${runId}\n`);
-                                core.info(`🏆 API response RunId: ${runId}`);
+                                core.info(`🏆 API response runId: ${runId}`);
                                 core.setOutput('runId', runId);
                                 return;
                             }
@@ -6554,7 +6554,7 @@ exports.Deprecation = Deprecation;
 /***/ 731:
 /***/ (function(module) {
 
-module.exports = {"name":"workflow-dispatch","version":"1.1","description":"Trigger running GitHub Actions workflows","main":"dist/index.js","scripts":{"build":"ncc build src/main.ts -o dist","lint":"eslint src/"},"keywords":["github","actions"],"author":"Microtema","license":"MIT","devDependencies":{"@typescript-eslint/eslint-plugin":"^5.41.0","@typescript-eslint/parser":"^5.41.0","@zeit/ncc":"^0.22.3","eslint":"^8.26.0","typescript":"^4.8.4"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1"}};
+module.exports = {"name":"workflow-dispatch","version":"2.2","description":"Trigger running GitHub Actions workflows and return runId","main":"dist/index.js","scripts":{"build":"ncc build src/main.ts -o dist","lint":"eslint src/"},"keywords":["github","actions"],"author":"Microtema","license":"MIT","devDependencies":{"@typescript-eslint/eslint-plugin":"^5.41.0","@typescript-eslint/parser":"^5.41.0","@zeit/ncc":"^0.22.3","eslint":"^8.26.0","typescript":"^4.8.4"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1"}};
 
 /***/ }),
 

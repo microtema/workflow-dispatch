@@ -1,9 +1,9 @@
 name: Message Echo 2
 
-on: 
+on:
   workflow_dispatch:
     inputs:
-      message:
+      commitId:
         description: "Message to echo"
         required: false
         default: "this is echo 2"
@@ -13,4 +13,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Echo message
-        run: echo '${{ inputs.message }}'
+        run: echo '${{ inputs.commitId }}'

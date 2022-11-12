@@ -2,10 +2,10 @@ name: Message Echo 3
 
 # A version using workflow_call for investigation purposes
 
-on: 
+on:
   workflow_call:
     inputs:
-      message:
+      commitId:
         required: false
         default: "this is echo 3"
         type: string
@@ -16,4 +16,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Echo message
-        run: echo '${{ inputs.message }}'
+        run: echo '${{ inputs.commitId }}'

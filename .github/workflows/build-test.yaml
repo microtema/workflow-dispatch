@@ -22,7 +22,7 @@ jobs:
       with:
         workflow: Message Echo 1
         token: ${{ secrets.PERSONAL_TOKEN }}
-        inputs: '{"message": "blah blah"}'
+        inputs: '{"commitId": "1234567"}'
 
     - name: Invoke echo 2 workflow using this action
       uses: ./
@@ -35,18 +35,9 @@ jobs:
       with:
         workflow: '1854247'
         token: ${{ secrets.PERSONAL_TOKEN }}
-        inputs: '{"message": "Mango jam"}'
+        inputs: '{"commitId": "1234567"}'
 
     - name: Update repo with build
       uses: mikeal/publish-to-github-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # - name: Invoke external workflow using this action
-    #   uses: ./
-    #   with:
-    #     workflow: Deploy To Kubernetes           
-    #     repo: benc-uk/dapr-store
-    #     token: ${{ secrets.PERSONAL_TOKEN }}
-    #     ref: master 
-   
