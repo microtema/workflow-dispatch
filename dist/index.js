@@ -1809,7 +1809,7 @@ function getWorkflowRunIds(workflowId, config, octokit) {
                 throw new Error(`Failed to get Workflow runs, expected 200 but received ${response.status}`);
             }
             const runIds = response.data.workflow_runs.map((workflowRun) => workflowRun.id);
-            core.info("Fetched Workflow Runs:\n" +
+            core.debug("Fetched Workflow Runs:\n" +
                 `  Repository: ${config.owner}/${config.repo}\n` +
                 `  Branch: ${branchName || "undefined"}\n` +
                 `  Workflow ID: ${workflowId}\n` +
@@ -1893,11 +1893,11 @@ function applyWorkflowRunId(workflowId, config, octokit) {
             const timeoutMs = (getNumberFromValue(config.workflowTimeoutSeconds) || WORKFLOW_TIMEOUT_SECONDS) * 1000;
             let attemptNo = 0;
             let elapsedTime = Date.now() - startTime;
-            core.info("Attempt to extract run ID from steps filtered by [${config.commitId}] ...");
+            core.info(`Attempt to extract run ID for Workflow ID ${workflowId} steps filtered by [${config.commitId}] ...`);
             while (elapsedTime < timeoutMs) {
                 attemptNo++;
                 elapsedTime = Date.now() - startTime;
-                core.info(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`);
+                core.debug(`Attempting to fetch Run IDs for Workflow ID ${workflowId}`);
                 // Get all runs for a given workflow ID
                 const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS;
                 const workflowRunIds = yield retryOrDie(() => getWorkflowRunIds(workflowId, config, octokit), timeout);

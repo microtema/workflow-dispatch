@@ -47,7 +47,7 @@ async function getWorkflowRunIds(workflowId: number, config: any, octokit: Octok
             (workflowRun) => workflowRun.id
         )
 
-        core.info(
+        core.debug(
             "Fetched Workflow Runs:\n" +
             `  Repository: ${config.owner}/${config.repo}\n` +
             `  Branch: ${branchName || "undefined"}\n` +
@@ -143,13 +143,13 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
         let attemptNo = 0
         let elapsedTime = Date.now() - startTime
 
-        core.info("Attempt to extract run ID from steps filtered by [${config.commitId}] ...")
+        core.info(`Attempt to extract run ID for Workflow ID ${workflowId} steps filtered by [${config.commitId}] ...`)
 
         while (elapsedTime < timeoutMs) {
             attemptNo++
             elapsedTime = Date.now() - startTime
 
-            core.info(`Attempting to fetch Run IDs for Workflow ID ${config.workflowId}`)
+            core.debug(`Attempting to fetch Run IDs for Workflow ID ${workflowId}`)
 
             // Get all runs for a given workflow ID
             const timeout = WORKFLOW_FETCH_TIMEOUT_MS > timeoutMs ? timeoutMs : WORKFLOW_FETCH_TIMEOUT_MS
