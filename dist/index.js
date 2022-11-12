@@ -1852,7 +1852,7 @@ function getWorkflowRunJobSteps(runId, config, octokit) {
                 steps.forEach((step) => allSteps.push(step));
             });
             const steps = Array.from(new Set(allSteps));
-            core.info("Fetched Workflow Run Job Steps:\n" +
+            core.debug("Fetched Workflow Run Job Steps:\n" +
                 `  Repository: ${config.owner}/${config.repo}\n` +
                 `  Workflow Run ID: ${config.runId}\n` +
                 `  Jobs Fetched: [${jobs.map((job) => job.id)}]` +
@@ -1893,7 +1893,7 @@ function applyWorkflowRunId(workflowId, config, octokit) {
             const timeoutMs = (getNumberFromValue(config.workflowTimeoutSeconds) || WORKFLOW_TIMEOUT_SECONDS) * 1000;
             let attemptNo = 0;
             let elapsedTime = Date.now() - startTime;
-            core.info(`Attempt to extract run ID for Workflow ID ${workflowId} steps filtered by [${config.commitId}] ...`);
+            core.info(`Attempt to extract run ID for Workflow ID [${workflowId}] steps filtered by UUID [${config.commitId}] ...`);
             while (elapsedTime < timeoutMs) {
                 attemptNo++;
                 elapsedTime = Date.now() - startTime;
@@ -1916,9 +1916,9 @@ function applyWorkflowRunId(workflowId, config, octokit) {
                                 `  idRegex: ${idRegex}` +
                                 `  idRegex.test: ${idRegex.test(step)}`);
                             if (idRegex.test(step)) {
-                                core.info("Successfully identified remote Run:\n" +
+                                core.debug("Successfully identified remote Run:\n" +
                                     `  Run ID: ${runId}\n`);
-                                core.info(`runId: ${runId}`);
+                                core.info(`🏆 Workflow RunId: ${runId}`);
                                 core.setOutput('runId', runId);
                                 return;
                             }

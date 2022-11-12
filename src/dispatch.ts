@@ -93,7 +93,7 @@ async function getWorkflowRunJobSteps(runId: number, config: any, octokit: Octok
 
         const steps = Array.from(new Set(allSteps))
 
-        core.info(
+        core.debug(
             "Fetched Workflow Run Job Steps:\n" +
             `  Repository: ${config.owner}/${config.repo}\n` +
             `  Workflow Run ID: ${config.runId}\n` +
@@ -143,7 +143,7 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
         let attemptNo = 0
         let elapsedTime = Date.now() - startTime
 
-        core.info(`Attempt to extract run ID for Workflow ID ${workflowId} steps filtered by [${config.commitId}] ...`)
+        core.info(`Attempt to extract run ID for Workflow ID [${workflowId}] steps filtered by UUID [${config.commitId}] ...`)
 
         while (elapsedTime < timeoutMs) {
             attemptNo++
@@ -179,11 +179,11 @@ export async function applyWorkflowRunId(workflowId: number, config: any, octoki
                         )
 
                         if (idRegex.test(step)) {
-                            core.info(
+                            core.debug(
                                 "Successfully identified remote Run:\n" +
                                 `  Run ID: ${runId}\n`
                             )
-                            core.info(`runId: ${runId}`)
+                            core.info(`🏆 Workflow RunId: ${runId}`)
                             core.setOutput('runId', runId)
                             return
                         }
